@@ -1,11 +1,6 @@
 package com.example.developer.googlemapsdemoapp;
 
-import android.graphics.Color;
 import android.os.AsyncTask;
-
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.maps.android.PolyUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,22 +9,26 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class FetchData extends AsyncTask<String, Void, String> {
+public class FetchAdress extends AsyncTask<String, Void, String> {
 
-    private GoogleMap map;
+    private OnAdressGetListener onAdressGetListener;
 
-    public FetchData(GoogleMap map) {
-        this.map = map;
+    FetchAdress(OnAdressGetListener onAdressGetListener) {
+        this.onAdressGetListener = onAdressGetListener;
+    }
+
+    public interface OnAdressGetListener{
+        void onAdressGet(String adress);
     }
 
     @Override
-    protected String doInBackground(String... url) {
-
+    protected String doInBackground(String... strings) {
         String data = "";
 
         try {
-            data = downloadUrl(url[0]);
+            data = downloadJson(strings[0]);
         } catch (Exception e) {
+            e.printStackTrace();
         }
         return data;
     }
@@ -38,13 +37,14 @@ public class FetchData extends AsyncTask<String, Void, String> {
     protected void onPostExecute(String result) {
         super.onPostExecute(result);
 
-        String[] directionsList;
-        DataParser dataParser = new DataParser();
-        directionsList = dataParser.parse(result);
-        displayDirection(directionsList);
+        AdressJsonParser adressJsonParser = new AdressJsonParser();
+        String adress = adressJsonParser.parse(result);
+        if (onAdressGetListener != null) {
+            onAdressGetListener.onAdressGet(adress);
+        }
     }
 
-    private String downloadUrl(String strUrl) throws IOException {
+    private String downloadJson(String strUrl) throws IOException {
         String data = "";
         InputStream iStream = null;
         HttpURLConnection urlConnection = null;
@@ -69,19 +69,5 @@ public class FetchData extends AsyncTask<String, Void, String> {
         }
 
         return data;
-    }
-
-    public void displayDirection(String[] directionsList) {
-        if (directionsList != null){
-            int count = directionsList.length;
-            for(int i = 0;i<count;i++) {
-                PolylineOptions options = new PolylineOptions();
-                options.color(Color.RED);
-                options.width(10);
-                options.addAll(PolyUtil.decode(directionsList[i]));
-
-                map.addPolyline(options);
-            }
-        }
     }
 }
