@@ -39,16 +39,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         to = findViewById(R.id.to);
     }
 
-
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
@@ -60,7 +50,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         markerpoints = new ArrayList<>();
 
-        // Add a marker in Sydney and move the camera
         LatLng sydney = new LatLng(-34, 151);
         map.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         map.moveCamera(CameraUpdateFactory.newLatLng(sydney));
@@ -75,10 +64,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         map.addMarker(new MarkerOptions().position(latLng));
         markerpoints.add(latLng);
 
-        if (from.getText().toString().equals("")) {
-            from.setText("from" + latLng);
-        } else {
-            to.setText("to" + latLng);
+        if (markerpoints.size() == 2) {
+            LatLng origin = markerpoints.get(0);
+            LatLng destination = markerpoints.get(1);
+
+            String directionsUrl = getDirectionsUrl(origin, destination);
+            FetchData fetchData = new FetchData(map);
+            fetchData.execute(directionsUrl);
+
+            map.moveCamera(CameraUpdateFactory.newLatLng(origin));
+            map.animateCamera(CameraUpdateFactory.zoomTo(11));
         }
+    }
+
+    private String getDirectionsUrl(LatLng from,LatLng to){
+
+        String str_origin = "origin="+from.latitude+","+from.longitude;
+        String str_dest = "destination="+to.latitude+","+to.longitude;
+        String sensor = "sensor=false";
+        String parameters = str_origin+"&"+str_dest+"&"+sensor;
+        String url = "https://maps.googleapis.com/maps/api/directions/json?"+parameters;
+
+        return url;
     }
 }
