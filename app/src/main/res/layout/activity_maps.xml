@@ -5,19 +5,25 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <EditText
+    <TextView
         android:id="@+id/from"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="textAutoComplete|textAutoCorrect"
-        android:imeOptions="actionSearch"/>
+        android:layout_height="50dp"
+        android:gravity="center_vertical"
+        android:textSize="20sp"
+        tools:text="dsdsdsd"/>
 
-    <EditText
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#000000"/>
+
+    <TextView
         android:id="@+id/to"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="textAutoComplete|textAutoCorrect"
-        android:imeOptions="actionSearch"/>
+        android:layout_height="50dp"
+        android:gravity="center_vertical"
+        android:textSize="20sp" />
 
     <fragment
     android:id="@+id/map"

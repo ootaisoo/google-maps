@@ -11,12 +11,17 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 
 public class FetchPlaceId extends AsyncTask<String, Void, String> {
 
     private static final String LOG_TAG  = FetchPlaceId.class.getSimpleName();
 
     FetchLatLng.OnLatLngGetListener latLngGetListener;
+
+    public interface OnPredictionsGetListener{
+        void OnPredictionsGet(List<String> predictions);
+    }
 
     public FetchPlaceId(FetchLatLng.OnLatLngGetListener latLngGetListener) {
         this.latLngGetListener = latLngGetListener;
@@ -27,7 +32,7 @@ public class FetchPlaceId extends AsyncTask<String, Void, String> {
         String data = "";
 
         try {
-            data = downloadUrl(url[0]);
+            data = UtilsUrl.downloadUrl(url[0]);
         } catch (Exception e) {
         }
         return data;
@@ -37,41 +42,15 @@ public class FetchPlaceId extends AsyncTask<String, Void, String> {
     protected void onPostExecute(String result) {
         super.onPostExecute(result);
 
+        Log.e(LOG_TAG, result);
+
         AdressToLatLngParser parser = new AdressToLatLngParser();
-        String placeId = parser.parse(result);
-
+        String plaseId = parser.parse(result);
         FetchLatLng fetchLatLng = new FetchLatLng(latLngGetListener);
-        fetchLatLng.execute(getPlaceDetailsUrl(placeId));
+        fetchLatLng.execute(getPlaceIdUrl(plaseId));
     }
 
-    private String downloadUrl(String strUrl) throws IOException {
-        String data = "";
-        InputStream iStream = null;
-        HttpURLConnection urlConnection = null;
-        try {
-            URL url = new URL(strUrl);
-            urlConnection = (HttpURLConnection) url.openConnection();
-            urlConnection.connect();
-            iStream = urlConnection.getInputStream();
-            BufferedReader br = new BufferedReader(new InputStreamReader(iStream));
-            StringBuffer sb = new StringBuffer();
-            String line = "";
-            while ((line = br.readLine()) != null) {
-                sb.append(line);
-            }
-
-            data = sb.toString();
-            br.close();
-        } catch (Exception e) {
-        } finally {
-            iStream.close();
-            urlConnection.disconnect();
-        }
-
-        return data;
-    }
-
-    private String getPlaceDetailsUrl(String plaseId){
+    private String getPlaceIdUrl(String plaseId){
         String baseurl = "https://maps.googleapis.com/maps/api/place/details/json?";
         return baseurl + "placeid=" + plaseId + "&key=" + "AIzaSyDy7eOHAFMIv7k4eDWns5w9fMcmCJ1XaVo" + "&language=RU";
     }
