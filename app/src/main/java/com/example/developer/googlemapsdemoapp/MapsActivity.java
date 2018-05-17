@@ -3,7 +3,10 @@ package com.example.developer.googlemapsdemoapp;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -16,7 +19,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener, FetchAdress.OnAdressGetListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener, FetchAdress.OnAdressGetListener, FetchLatLng.OnLatLngGetListener {
 
     private static final String LOG_TAG  = FragmentActivity.class.getSimpleName();
 
@@ -36,6 +39,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         from = findViewById(R.id.from);
         to = findViewById(R.id.to);
+
+        from.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    getCoordinates(from.getText().toString());
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        to.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                    getCoordinates(to.getText().toString());
+                    return true;
+                }
+                return false;
+            }
+        });
     }
 
     @Override
@@ -57,28 +82,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onMapClick(LatLng latLng) {
-        if (markerpoints.size() > 1){
-            markerpoints.clear();
-            map.clear();
-            from.setText("");
-            to.setText("");
-        }
-        map.addMarker(new MarkerOptions().position(latLng));
-        markerpoints.add(latLng);
-
         getAdress(latLng);
-
-        if (markerpoints.size() == 2) {
-            LatLng origin = markerpoints.get(0);
-            LatLng destination = markerpoints.get(1);
-
-            String directionsUrl = getDirectionsUrl(origin, destination);
-            FetchData fetchData = new FetchData(map);
-            fetchData.execute(directionsUrl);
-
-            map.moveCamera(CameraUpdateFactory.newLatLng(origin));
-            map.animateCamera(CameraUpdateFactory.zoomTo(11));
-        }
+        handleLatLng(latLng);
     }
 
     private String getDirectionsUrl(LatLng from, LatLng to){
@@ -96,15 +101,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String baseurl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=";
         String latitude = String.valueOf(latLng.latitude);
         String longitude = String.valueOf(latLng.longitude);
+        return baseurl + latitude + "," + longitude + "&key=" + "AIzaSyDy7eOHAFMIv7k4eDWns5w9fMcmCJ1XaVo" + "&language=RU";
+    }
 
-        String geoCodingUrl = baseurl + latitude + "," + longitude + "&key=" + "AIzaSyDy7eOHAFMIv7k4eDWns5w9fMcmCJ1XaVo";
-        Log.e(LOG_TAG, geoCodingUrl);
-        return geoCodingUrl;
+    private String getreverseGeoCodingUrl(String input){
+        String baseUrl = "https://maps.googleapis.com/maps/api/place/autocomplete/json?";
+        return baseUrl + "input=" + input + "&key=" + "AIzaSyDy7eOHAFMIv7k4eDWns5w9fMcmCJ1XaVo" + "&language=RU";
     }
 
     public void getAdress(LatLng latLng){
         FetchAdress fetchAdress = new FetchAdress(this);
         fetchAdress.execute(getGeoCodingUrl(latLng));
+    }
+
+    public void getCoordinates(String input){
+        FetchPlaceId fetchLatLng = new FetchPlaceId(this);
+        fetchLatLng.execute(getreverseGeoCodingUrl(input));
     }
 
     @Override
@@ -116,4 +128,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             to.setText(adress);
         }
     }
+
+    @Override
+    public void onLatLngGet(LatLng latLng) {
+        Log.e(LOG_TAG, "onLatLngGet()");
+        handleLatLng(latLng);
+    }
+
+    private void handleLatLng(LatLng latLng){
+        if (markerpoints.size() > 1){
+            markerpoints.clear();
+            map.clear();
+            from.setText("");
+            to.setText("");
+        }
+        map.addMarker(new MarkerOptions().position(latLng));
+        markerpoints.add(latLng);
+        map.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+
+        if (markerpoints.size() == 2) {
+            LatLng origin = markerpoints.get(0);
+            LatLng destination = markerpoints.get(1);
+
+            String directionsUrl = getDirectionsUrl(origin, destination);
+            FetchData fetchData = new FetchData(map);
+            fetchData.execute(directionsUrl);
+
+            map.moveCamera(CameraUpdateFactory.newLatLng(origin));
+            map.animateCamera(CameraUpdateFactory.zoomTo(11));
+        }
+    }
+
+
 }

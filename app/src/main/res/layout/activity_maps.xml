@@ -8,12 +8,16 @@
     <EditText
         android:id="@+id/from"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:inputType="textAutoComplete|textAutoCorrect"
+        android:imeOptions="actionSearch"/>
 
     <EditText
         android:id="@+id/to"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:inputType="textAutoComplete|textAutoCorrect"
+        android:imeOptions="actionSearch"/>
 
     <fragment
     android:id="@+id/map"
