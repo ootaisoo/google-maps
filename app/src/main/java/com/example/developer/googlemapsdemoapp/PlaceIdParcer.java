@@ -1,7 +1,5 @@
 package com.example.developer.googlemapsdemoapp;
 
-import android.util.Log;
-
 import com.google.android.gms.maps.model.LatLng;
 
 import org.json.JSONException;
@@ -9,7 +7,7 @@ import org.json.JSONObject;
 
 public class PlaceIdParcer {
 
-    private static final String LOG_TAG  = AdressToLatLngParser.class.getSimpleName();
+    private static final String LOG_TAG  = PlaceIdParcer.class.getSimpleName();
 
     public LatLng parse(String result){
         String latitude = null;

@@ -1,6 +1,5 @@
 package com.example.developer.googlemapsdemoapp;
 
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -17,9 +16,7 @@ import android.widget.TextView;
 
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
-import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -27,7 +24,6 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
-import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -39,30 +35,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final String LOG_TAG  = FragmentActivity.class.getSimpleName();
     private static final int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
+    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10;
+    private static final long MIN_TIME_BW_UPDATES = 1000 * 60;
 
     private TextView from;
     private TextView to;
-    private GoogleApiClient googleApiClient;
     private GoogleMap map;
-    private UiSettings uiSettings;
     private List<LatLng> markerpoints;
     private boolean mLocationPermissionGranted;
-    private CameraPosition cameraPosition;
-    private LocationManager locationManager;
     private LatLng currentLocation;
-
-
-    boolean isGPSEnabled = false;
-
-
-    boolean isNetworkEnabled = false;
-
-    boolean canGetLocation = false;
-
-    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10; // 10 meters
-
-    private static final long MIN_TIME_BW_UPDATES = 1000 * 60 * 1; // 1 minute
-
+    private boolean isGPSEnabled = false;
+    private boolean isNetworkEnabled = false;
+    private boolean canGetLocation = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,7 +97,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
-        uiSettings = map.getUiSettings();
+        UiSettings uiSettings = map.getUiSettings();
 
         uiSettings.setZoomControlsEnabled(true);
 
@@ -153,19 +137,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return baseurl + latitude + "," + longitude + "&key=" + "AIzaSyDy7eOHAFMIv7k4eDWns5w9fMcmCJ1XaVo" + "&language=RU";
     }
 
-    private String getreverseGeoCodingUrl(String input){
-        String baseUrl = "https://maps.googleapis.com/maps/api/place/autocomplete/json?";
-        return baseUrl + "input=" + input + "&key=" + "AIzaSyDy7eOHAFMIv7k4eDWns5w9fMcmCJ1XaVo" + "&language=RU";
-    }
-
     public void getAdress(LatLng latLng){
         FetchAdress fetchAdress = new FetchAdress(this);
         fetchAdress.execute(getGeoCodingUrl(latLng));
-    }
-
-    public void getCoordinates(String input){
-        FetchPlaceId fetchLatLng = new FetchPlaceId(this);
-        fetchLatLng.execute(getreverseGeoCodingUrl(input));
     }
 
     @Override
@@ -295,12 +269,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Location location = null;
 
         try {
-            locationManager = (LocationManager) this.getSystemService(LOCATION_SERVICE);
-            isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-            isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+            LocationManager locationManager = (LocationManager) this.getSystemService(LOCATION_SERVICE);
+            boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
             if (!isGPSEnabled && !isNetworkEnabled) {
-                // No network provider is enabled
             } else {
                 this.canGetLocation = true;
                 if (isNetworkEnabled) {
