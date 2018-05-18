@@ -19,9 +19,6 @@ public class FetchPlaceId extends AsyncTask<String, Void, String> {
 
     FetchLatLng.OnLatLngGetListener latLngGetListener;
 
-    public interface OnPredictionsGetListener{
-        void OnPredictionsGet(List<String> predictions);
-    }
 
     public FetchPlaceId(FetchLatLng.OnLatLngGetListener latLngGetListener) {
         this.latLngGetListener = latLngGetListener;

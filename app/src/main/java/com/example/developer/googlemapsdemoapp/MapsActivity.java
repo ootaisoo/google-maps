@@ -1,21 +1,18 @@
 package com.example.developer.googlemapsdemoapp;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
-import android.widget.EditText;
 import android.widget.TextView;
 
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
@@ -24,20 +21,20 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Place;
-import com.google.android.gms.location.places.Places;
 import com.google.android.gms.location.places.ui.PlaceAutocomplete;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener, FetchAdress.OnAdressGetListener, FetchLatLng.OnLatLngGetListener{
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener, FetchAdress.OnAdressGetListener, FetchLatLng.OnLatLngGetListener, LocationListener{
 
     private static final String LOG_TAG  = FragmentActivity.class.getSimpleName();
     private static final int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1;
@@ -50,7 +47,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private UiSettings uiSettings;
     private List<LatLng> markerpoints;
     private boolean mLocationPermissionGranted;
-    private Location mLastKnownLocation;
+    private CameraPosition cameraPosition;
+    private LocationManager locationManager;
+    private LatLng currentLocation;
+
+
+    boolean isGPSEnabled = false;
+
+
+    boolean isNetworkEnabled = false;
+
+    boolean canGetLocation = false;
+
+    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10; // 10 meters
+
+    private static final long MIN_TIME_BW_UPDATES = 1000 * 60 * 1; // 1 minute
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,15 +72,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-//        googleApiClient = new GoogleApiClient.Builder(this)
-//                .enableAutoManage(this /* FragmentActivity */,
-//                        this /* OnConnectionFailedListener */)
-//                .addConnectionCallbacks(this)
-//                .addApi(LocationServices.API)
-//                .addApi(Places.GEO_DATA_API)
-//                .addApi(Places.PLACE_DETECTION_API)
-//                .build();
-//        googleApiClient.connect();
+        currentLocation = getCurrentLocation();
 
         from = findViewById(R.id.from);
         to = findViewById(R.id.to);
@@ -117,13 +121,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         markerpoints = new ArrayList<>();
 
+        getDevicePermission();
         updateLocationUI();
-        getDeviceLocation();
 
-        map.addMarker(new MarkerOptions().position(currentLocation).title("Marker in Rostov"));
+        map.addMarker(new MarkerOptions().position(currentLocation));
         markerpoints.add(currentLocation);
         map.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
         map.animateCamera(CameraUpdateFactory.zoomTo(11));
+        getAdress(currentLocation);
     }
 
     @Override
@@ -175,7 +180,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onLatLngGet(LatLng latLng) {
-        Log.e(LOG_TAG, "onLatLngGet()");
         handleLatLng(latLng);
     }
 
@@ -220,7 +224,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void getDeviceLocation() {
+    private void getDevicePermission() {
         if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
                 android.Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
@@ -230,7 +234,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
                     PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
         }
-        // A step later in the tutorial adds the code to get the device location.
     }
 
     @Override
@@ -240,7 +243,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationPermissionGranted = false;
         switch (requestCode) {
             case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
-                // If request is cancelled, the result arrays are empty.
+
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     mLocationPermissionGranted = true;
@@ -261,28 +264,76 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             } else {
                 map.setMyLocationEnabled(false);
                 map.getUiSettings().setMyLocationButtonEnabled(false);
-                mLastKnownLocation = null;
-                getLocationPermission();
+                getDevicePermission();
             }
         } catch (SecurityException e)  {
             Log.e("Exception: %s", e.getMessage());
         }
     }
 
-    private void getLocationPermission() {
-        /*
-         * Request location permission, so that we can get the location of the
-         * device. The result of the permission request is handled by a callback,
-         * onRequestPermissionsResult.
-         */
-        if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
-                android.Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-            mLocationPermissionGranted = true;
-        } else {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
-                    PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-        }
+    @Override
+    public void onLocationChanged(Location location) {
+        Log.d(LOG_TAG, "onLocationChanged()");
     }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+        Log.d("Latitude","disable");
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        Log.d("Latitude","enable");
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        Log.d("Latitude","status");
+    }
+
+    public LatLng getCurrentLocation() {
+        Location location = null;
+
+        try {
+            locationManager = (LocationManager) this.getSystemService(LOCATION_SERVICE);
+            isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+            if (!isGPSEnabled && !isNetworkEnabled) {
+                // No network provider is enabled
+            } else {
+                this.canGetLocation = true;
+                if (isNetworkEnabled) {
+                    locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_TIME_BW_UPDATES, MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+                    if (locationManager != null) {
+                        location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                        if (location != null) {
+                            currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                        }
+                    }
+                }
+                if (isGPSEnabled) {
+                    if (location == null) {
+                        locationManager.requestLocationUpdates(
+                                LocationManager.GPS_PROVIDER,
+                                MIN_TIME_BW_UPDATES,
+                                MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+                        if (locationManager != null) {
+                            location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                            if (location != null) {
+                                currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (SecurityException e) {
+            e.printStackTrace();
+        }
+
+        return currentLocation;
+    }
+
+
 }
